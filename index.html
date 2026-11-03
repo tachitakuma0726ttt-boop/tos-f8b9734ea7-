@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TACTICAL OS</title><meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="TACTICAL OS"><meta name="theme-color" content="#0b1021">
+<link rel="apple-touch-icon" href="icon-180.png"><link rel="manifest" href="manifest.webmanifest">
+<style>html,body{margin:0;height:100%;background:#0b1021;color:#e2e8f0;font-family:-apple-system,"Hiragino Sans",sans-serif}
+body{display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px}
+form{width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px}h1{margin:0;font-size:22px;letter-spacing:.2em;color:#22d3ee;font-style:italic}
+input[type=password],input[type=text]{font-size:16px;padding:14px;border-radius:12px;border:1px solid #334155;background:#121932;color:#fff}
+button{font-size:15px;font-weight:800;padding:14px;border:0;border-radius:12px;color:#fff;background:linear-gradient(90deg,#06b6d4,#2563eb)}
+label{font-size:12px;opacity:.7;display:flex;gap:8px;align-items:center}#m{font-size:12px;min-height:16px;color:#f472b6}</style></head>
+<body><form id="f" autocomplete="off"><h1>TACTICAL OS</h1><input id="p" type="password" placeholder="合言葉" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="current-password">
+<label><input id="r" type="checkbox" checked>この端末で合言葉を記憶する</label><button id="b" type="submit">開く</button><div id="m"></div></form>
+<script>
+(function(){
+var ITER=600000,$=function(i){return document.getElementById(i)},m=$('m');
+function b64(u){var s='';u.forEach(function(x){s+=String.fromCharCode(x)});return btoa(s)}
+function ub64(s){return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0)})}
+function load(){return fetch('payload.bin',{cache:'no-cache'}).catch(function(){return fetch('payload.bin')}).then(function(r){return r.arrayBuffer()}).then(function(a){return new Uint8Array(a)})}
+function boot(h){var d=new DOMParser().parseFromString(h,'text/html'),L=[];
+[].slice.call(d.querySelectorAll('script')).forEach(function(x){var t=(x.getAttribute('type')||'').toLowerCase();if(t&&t!=='text/javascript'&&t!=='module'&&t!=='application/javascript')return;L.push({a:[].slice.call(x.attributes).map(function(q){return[q.name,q.value]}),t:x.textContent});x.parentNode.removeChild(x)});
+document.head.innerHTML=d.head.innerHTML;document.body.innerHTML=d.body.innerHTML;
+(function nx(i){if(i>=L.length)return;var o=L[i],e=document.createElement('script');o.a.forEach(function(q){e.setAttribute(q[0],q[1])});var src=e.getAttribute('src');
+if(src){e.onload=e.onerror=function(){nx(i+1)};document.head.appendChild(e)}else{e.text=o.t;document.head.appendChild(e);nx(i+1)}})(0)}
+function run(key,buf){return crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(16,28)},key,buf.slice(28)).then(function(pt){boot(new TextDecoder().decode(pt))})}
+function imp(raw){return crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt'])}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+var saved=null;try{saved=localStorage.getItem('tos_key')}catch(e){}
+if(saved){m.textContent='開いています…';load().then(function(buf){return imp(ub64(saved)).then(function(k){return run(k,buf)})}).catch(function(){try{localStorage.removeItem('tos_key')}catch(e){};m.textContent='合言葉を入力してください'})}
+$('f').addEventListener('submit',function(e){e.preventDefault();var pw=$('p').value,rem=$('r').checked;if(!pw)return;$('b').disabled=true;m.textContent='確認中…（数秒かかります）';
+load().then(function(buf){var enc=new TextEncoder();return crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']).then(function(k){return crypto.subtle.deriveBits({name:'PBKDF2',salt:buf.slice(0,16),iterations:ITER,hash:'SHA-256'},k,256)}).then(function(raw){var u=new Uint8Array(raw);return imp(u).then(function(k){return run(k,buf)}).then(function(){if(rem){try{localStorage.setItem('tos_key',b64(u))}catch(e){}}})})}).catch(function(){$('b').disabled=false;m.textContent='合言葉が違うか、読み込みに失敗しました'})});
+})();
+</script></body></html>
