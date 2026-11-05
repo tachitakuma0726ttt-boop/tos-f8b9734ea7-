@@ -4815,7 +4815,7 @@
                 skipTicketCost: 1,                                                                  // 派遣の「待ち時間スキップ」で消費する🎫（#56）
                 allClearPower: 1.5,                                                                  // #68：その日の任務を全て達成（ALL CLEAR）した日は、出撃の味方HP・ATKが×1.5（その日限り）
                 // #68：深淵（ABYSS）＝STAGE1〜5を全て★3でクリアすると解放される無限の塔。n層の敵＝HP hp0×hpGrow^(n-1)・ATK atk0×atkGrow^(n-1)。報酬は初回クリアごとに満額（結晶 cry0+cryPer×n／青輝石 sto＋mile層ごとにstoMile／mile層ごとに🎫+1）
-                abyss: { unlockStars: 3, hp0: 2300, hpGrow: 1.07, atk0: 40, atkGrow: 1.04, cry0: 30, cryPer: 10, sto: 5, stoMile: 10, mile: 5 },
+                abyss: { unlockStars: 3, hp0: 2300, hpGrow: 1.07, atk0: 52, atkGrow: 1.06, cry0: 30, cryPer: 10, sto: 5, stoMile: 10, mile: 5 },
                 condBonus: 0.25,                                                                     // #67：派遣の「依頼の条件（必須ロール／異なるロール数）を満たした編成」で結晶・青輝石 +25%（条件のある依頼のみ。旧おまかせ編成の★追加ボーナスは廃止）
                 taskBonus: 0.2                                                                       // その日タスクを1件以上完了していれば派遣の結晶・青輝石 +20%（#50）
             }
@@ -8853,7 +8853,7 @@ const LoginCalendar = ({ theme, days, todayStr, stamped, loginDay }) => {
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     
 </script>
-    <script id="app-js" type="text/plain" data-hash="821dca90-468338">
+    <script id="app-js" type="text/plain" data-hash="e937f54f-468338">
 "use strict";
 //#!file 00-core.jsx
 const { useState, useRef, useEffect, memo } = React;
@@ -8898,7 +8898,7 @@ const BALANCE = {
         skipTicketCost: 1, // 派遣の「待ち時間スキップ」で消費する🎫（#56）
         allClearPower: 1.5, // #68：その日の任務を全て達成（ALL CLEAR）した日は、出撃の味方HP・ATKが×1.5（その日限り）
         // #68：深淵（ABYSS）＝STAGE1〜5を全て★3でクリアすると解放される無限の塔。n層の敵＝HP hp0×hpGrow^(n-1)・ATK atk0×atkGrow^(n-1)。報酬は初回クリアごとに満額（結晶 cry0+cryPer×n／青輝石 sto＋mile層ごとにstoMile／mile層ごとに🎫+1）
-        abyss: { unlockStars: 3, hp0: 2300, hpGrow: 1.07, atk0: 40, atkGrow: 1.04, cry0: 30, cryPer: 10, sto: 5, stoMile: 10, mile: 5 },
+        abyss: { unlockStars: 3, hp0: 2300, hpGrow: 1.07, atk0: 52, atkGrow: 1.06, cry0: 30, cryPer: 10, sto: 5, stoMile: 10, mile: 5 },
         condBonus: 0.25, // #67：派遣の「依頼の条件（必須ロール／異なるロール数）を満たした編成」で結晶・青輝石 +25%（条件のある依頼のみ。旧おまかせ編成の★追加ボーナスは廃止）
         taskBonus: 0.2 // その日タスクを1件以上完了していれば派遣の結晶・青輝石 +20%（#50）
     }
