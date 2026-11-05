@@ -4523,6 +4523,9 @@
         @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
         .anim-border-flow { background-size: 200% 100%; animation: borderFlow 4s linear infinite; }
         @keyframes shineSweep { 0% { transform: translateX(-130%) skewX(-20deg); } 60%, 100% { transform: translateX(330%) skewX(-20deg); } }
+        /* #93 MEMBERのSSR：流れる枠（マスク付きの背景アニメ＝毎フレーム再描画で重い）は止め、静止グラデの枠＋transformだけの光のスイープにする */
+        .mc-card.rf-ssr::before { animation: none; background-size: 100% 100%; }
+        .mc-card.gacha-shine::after { will-change: transform; }
         .mc-off.gacha-shine::after, .mc-off.rf-ssr::before { animation-play-state: paused !important; }
         .gacha-shine { position: relative; overflow: hidden; }
         .gacha-shine::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: shineSweep 3.4s ease-in-out infinite; pointer-events: none; }
@@ -7876,11 +7879,11 @@ function makeBgm(ctx, vol, mode) {
                             {gachaState === 'summary' && (
                                 <div className="relative z-[110] flex flex-col items-center justify-center w-full h-full p-4">
                                     <h3 className={`font-tech font-black text-2xl ${gl ? 'text-cyan-700' : 'text-cyan-400'} tracking-widest mb-6`}>獲得一覧</h3>
-                                    <div className="grid grid-cols-5 gap-2 w-full max-w-lg mb-6">
+                                    <div className="flex flex-wrap justify-center gap-2 w-full max-w-lg mb-6">   {/* #93 枚数が少なくても中央に（以前はgridで左端に寄っていた） */}
                                         {[...gachaResults].reverse().map((res, idx) => {
                                             const isResSsr = res.rare === 'SSR';
                                             return (
-                                                <div key={idx} style={{ animationDelay: `${idx * 0.05}s` }} className={`${rfClass(res.rare)} py-2 px-1 rounded-xl overflow-hidden flex flex-col items-center justify-end text-center aspect-[3/4] ${res.bg} ${isResSsr ? 'anim-card-ssr z-20' : res.rare === 'SR' ? 'anim-card-sr' : 'anim-card-r'}`}>
+                                                <div key={idx} style={{ animationDelay: `${idx * 0.05}s`, width: gachaResults.length === 1 ? 'clamp(8rem, 38%, 11rem)' : 'calc((100% - 2rem) / 5)' }} className={`${rfClass(res.rare)} py-2 px-1 rounded-xl overflow-hidden flex flex-col items-center justify-end text-center aspect-[3/4] ${res.bg} ${isResSsr ? 'anim-card-ssr z-20' : res.rare === 'SR' ? 'anim-card-sr' : 'anim-card-r'}`}>
                                                     <div className="absolute inset-0 z-0"><ImageFallback size="mid" src={res.img} icon={res.icon} iconSize="text-3xl mb-3" posX={res.posX} posY={res.posY} scale={res.scale} /></div>
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
                                                     {res.isNewPull && <span className="absolute top-0.5 left-0.5 z-30 text-[9px] font-tech font-black bg-rose-500 text-white px-1 rounded">NEW</span>}
@@ -8126,7 +8129,7 @@ const MemberCard = memo(({ student, ms, lv, memberInfo, dk, onPick, charging }) 
     const cardRef = React.useRef(null);
     React.useEffect(() => { const el = cardRef.current; if (!el || student.rare !== 'SSR' || !window.IntersectionObserver) return; let tm = 0; const io = new IntersectionObserver(([e]) => { clearTimeout(tm); if (e.isIntersecting) el.classList.remove('mc-off'); else tm = setTimeout(() => el.classList.add('mc-off'), 400); }, { rootMargin: '300px' }); io.observe(el); return () => { clearTimeout(tm); io.disconnect(); }; }, [student.rare]);
     return (
-                    <div ref={cardRef} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }} onClick={() => onPick(student)} className={`rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}`}>
+                    <div ref={cardRef} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }} onClick={() => onPick(student)} className={`rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto mc-card ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}`}>
                         <div className="absolute inset-0 z-0"><ImageFallback size="mid" src={student.img} icon={student.icon} iconSize="text-5xl mt-4" posX={student.posX} posY={student.posY} scale={student.scale} /></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10 pointer-events-none"></div>
                         <span className="absolute top-1.5 left-1.5 z-20 text-[10px] font-tech font-black text-pink-300 bg-black/60 px-1.5 py-0.5 rounded border border-pink-500/40 pointer-events-none">♥{lv}</span>
@@ -8850,7 +8853,7 @@ const LoginCalendar = ({ theme, days, todayStr, stamped, loginDay }) => {
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     
 </script>
-    <script id="app-js" type="text/plain" data-hash="dde430a3-468183">
+    <script id="app-js" type="text/plain" data-hash="821dca90-468338">
 "use strict";
 //#!file 00-core.jsx
 const { useState, useRef, useEffect, memo } = React;
@@ -13622,20 +13625,22 @@ function App() {
                     (gachaQueueIndex === 0 || isSr || isSsr) && React.createElement("div", { className: "absolute inset-0 z-[130] pointer-events-none anim-flash-out", style: { background: isSsr || gachaQueueIndex === 0 ? '#ffffff' : '#fde68a', animationDuration: isSsr ? '0.9s' : '0.55s' } }))),
                 gachaState === 'summary' && (React.createElement("div", { className: "relative z-[110] flex flex-col items-center justify-center w-full h-full p-4" },
                     React.createElement("h3", { className: `font-tech font-black text-2xl ${gl ? 'text-cyan-700' : 'text-cyan-400'} tracking-widest mb-6` }, "\u7372\u5F97\u4E00\u89A7"),
-                    React.createElement("div", { className: "grid grid-cols-5 gap-2 w-full max-w-lg mb-6" }, [...gachaResults].reverse().map((res, idx) => {
-                        const isResSsr = res.rare === 'SSR';
-                        return (React.createElement("div", { key: idx, style: { animationDelay: `${idx * 0.05}s` }, className: `${rfClass(res.rare)} py-2 px-1 rounded-xl overflow-hidden flex flex-col items-center justify-end text-center aspect-[3/4] ${res.bg} ${isResSsr ? 'anim-card-ssr z-20' : res.rare === 'SR' ? 'anim-card-sr' : 'anim-card-r'}` },
-                            React.createElement("div", { className: "absolute inset-0 z-0" },
-                                React.createElement(ImageFallback, { size: "mid", src: res.img, icon: res.icon, iconSize: "text-3xl mb-3", posX: res.posX, posY: res.posY, scale: res.scale })),
-                            React.createElement("div", { className: "absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10" }),
-                            res.isNewPull && React.createElement("span", { className: "absolute top-0.5 left-0.5 z-30 text-[9px] font-tech font-black bg-rose-500 text-white px-1 rounded" }, "NEW"),
-                            React.createElement("span", { className: "absolute top-0.5 right-0.5 z-30 text-[10px] font-tech font-black text-yellow-300 bg-black/65 px-1 rounded" },
-                                "\u2605",
-                                res.starAfter),
-                            React.createElement("div", { className: "z-20 flex flex-col items-center w-full pb-1" },
-                                React.createElement("span", { className: `font-tech font-black text-[10px] ${res.color}` }, res.rare),
-                                React.createElement("span", { className: "font-bold text-[10px] text-white truncate w-full px-0.5" }, res.name))));
-                    })),
+                    React.createElement("div", { className: "flex flex-wrap justify-center gap-2 w-full max-w-lg mb-6" },
+                        "   ",
+                        [...gachaResults].reverse().map((res, idx) => {
+                            const isResSsr = res.rare === 'SSR';
+                            return (React.createElement("div", { key: idx, style: { animationDelay: `${idx * 0.05}s`, width: gachaResults.length === 1 ? 'clamp(8rem, 38%, 11rem)' : 'calc((100% - 2rem) / 5)' }, className: `${rfClass(res.rare)} py-2 px-1 rounded-xl overflow-hidden flex flex-col items-center justify-end text-center aspect-[3/4] ${res.bg} ${isResSsr ? 'anim-card-ssr z-20' : res.rare === 'SR' ? 'anim-card-sr' : 'anim-card-r'}` },
+                                React.createElement("div", { className: "absolute inset-0 z-0" },
+                                    React.createElement(ImageFallback, { size: "mid", src: res.img, icon: res.icon, iconSize: "text-3xl mb-3", posX: res.posX, posY: res.posY, scale: res.scale })),
+                                React.createElement("div", { className: "absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10" }),
+                                res.isNewPull && React.createElement("span", { className: "absolute top-0.5 left-0.5 z-30 text-[9px] font-tech font-black bg-rose-500 text-white px-1 rounded" }, "NEW"),
+                                React.createElement("span", { className: "absolute top-0.5 right-0.5 z-30 text-[10px] font-tech font-black text-yellow-300 bg-black/65 px-1 rounded" },
+                                    "\u2605",
+                                    res.starAfter),
+                                React.createElement("div", { className: "z-20 flex flex-col items-center w-full pb-1" },
+                                    React.createElement("span", { className: `font-tech font-black text-[10px] ${res.color}` }, res.rare),
+                                    React.createElement("span", { className: "font-bold text-[10px] text-white truncate w-full px-0.5" }, res.name))));
+                        })),
                     crystalGainTotal > 0 && React.createElement("div", { className: `mb-5 text-[11px] font-bold ${gl ? 'text-pink-700 bg-pink-100 border-pink-300' : 'text-pink-400 bg-pink-500/10 border-pink-500/30'} px-4 py-2 rounded-2xl border animate-pulse text-center` },
                         "\u91CD\u8907\u306B\u3064\u304D\u300C\u2726 \u7D50\u6676\u300D\u3092 ",
                         crystalGainTotal,
@@ -13863,7 +13868,7 @@ const MemberCard = memo(({ student, ms, lv, memberInfo, dk, onPick, charging }) 
         el.classList.remove('mc-off');
     else
         tm = setTimeout(() => el.classList.add('mc-off'), 400); }, { rootMargin: '300px' }); io.observe(el); return () => { clearTimeout(tm); io.disconnect(); }; }, [student.rare]);
-    return (React.createElement("div", { ref: cardRef, style: { contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }, onClick: () => onPick(student), className: `rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}` },
+    return (React.createElement("div", { ref: cardRef, style: { contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }, onClick: () => onPick(student), className: `rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto mc-card ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}` },
         React.createElement("div", { className: "absolute inset-0 z-0" },
             React.createElement(ImageFallback, { size: "mid", src: student.img, icon: student.icon, iconSize: "text-5xl mt-4", posX: student.posX, posY: student.posY, scale: student.scale })),
         React.createElement("div", { className: "absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10 pointer-events-none" }),
