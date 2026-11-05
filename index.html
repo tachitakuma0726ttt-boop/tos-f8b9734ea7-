@@ -4791,7 +4791,7 @@
                     </div>
                 );
             }
-            return <img loading={size ? 'lazy' : undefined} decoding="async" src={(cid && ((size === 'icon' && window.TACTICAL_IMGS_ICON && window.TACTICAL_IMGS_ICON[cid]) || (size === 'mid' && window.TACTICAL_IMGS_MID && window.TACTICAL_IMGS_MID[cid]) || (window.TACTICAL_IMGS && window.TACTICAL_IMGS[cid]))) || src} onError={() => setError(true)} className={`w-full h-full object-cover ${className || ''}`} style={{ objectPosition: `${posX}% ${posY}%`, transformOrigin: `${posX}% ${posY}%`, transform: `scale(${scale})` }} alt="character" loading="lazy" decoding="async" />;
+            return <img decoding="async" src={(cid && ((size === 'icon' && window.TACTICAL_IMGS_ICON && window.TACTICAL_IMGS_ICON[cid]) || (size === 'mid' && window.TACTICAL_IMGS_MID && window.TACTICAL_IMGS_MID[cid]) || (window.TACTICAL_IMGS && window.TACTICAL_IMGS[cid]))) || src} onError={() => setError(true)} className={`w-full h-full object-cover ${className || ''}`} style={{ objectPosition: `${posX}% ${posY}%`, transformOrigin: `${posX}% ${posY}%`, transform: `scale(${scale})` }} alt="character" loading={size === 'mid' || size === 'icon' ? 'eager' : 'lazy'} decoding="async" />;
         });
 
 //#!file 00b-balance.jsx
@@ -8107,12 +8107,17 @@ function TasksScreen({ allCats, favOnly, setFavOnly, nearCounts, selEndStr, rend
 // 状態・関数はAppが持ち、props で受け取る（#44：App本体から分割。中身のJSXは分割前と同一）
 // #57：カード1枚を memo 部品に。画像・数値が変わらない限り再描画しない（MEMBERを開く／絞り込む時の負荷を軽減）
 // #89 非表示の間は再描画しない／display:noneで隠す（アニメーションも止まる）
-const KeepAlive = memo(({ active, children }) => <div className={active ? '' : 'hidden'}>{children}</div>, (a, b) => !a.active && !b.active);
+const KeepAlive = memo(({ active, children }) => {
+    const ref = React.useRef(null);
+    // 再表示した最初のフレームから光を動かす（隠している間に付いた .mc-off を同期的に外す。画面外のカードだけ後からIOが付け直す）
+    React.useLayoutEffect(() => { if (active && ref.current) ref.current.querySelectorAll('.mc-off').forEach(e => e.classList.remove('mc-off')); }, [active]);
+    return <div ref={ref} className={active ? '' : 'hidden'}>{children}</div>;
+}, (a, b) => !a.active && !b.active);
 const MemberCard = memo(({ student, ms, lv, memberInfo, dk, onPick, charging }) => {
     const MR = OPS_ROLE[student.role] || OPS_ROLE['アタッカー'];
     // #89 画面内にいるカードだけ光・枠のアニメを動かす（画面外はpaused）
     const cardRef = React.useRef(null);
-    React.useEffect(() => { const el = cardRef.current; if (!el || student.rare !== 'SSR' || !window.IntersectionObserver) return; const io = new IntersectionObserver(([e]) => el.classList.toggle('mc-off', !e.isIntersecting)); io.observe(el); return () => io.disconnect(); }, [student.rare]);
+    React.useEffect(() => { const el = cardRef.current; if (!el || student.rare !== 'SSR' || !window.IntersectionObserver) return; let tm = 0; const io = new IntersectionObserver(([e]) => { clearTimeout(tm); if (e.isIntersecting) el.classList.remove('mc-off'); else tm = setTimeout(() => el.classList.add('mc-off'), 400); }, { rootMargin: '300px' }); io.observe(el); return () => { clearTimeout(tm); io.disconnect(); }; }, [student.rare]);
     return (
                     <div ref={cardRef} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }} onClick={() => onPick(student)} className={`rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}`}>
                         <div className="absolute inset-0 z-0"><ImageFallback size="mid" src={student.img} icon={student.icon} iconSize="text-5xl mt-4" posX={student.posX} posY={student.posY} scale={student.scale} /></div>
@@ -8838,7 +8843,7 @@ const LoginCalendar = ({ theme, days, todayStr, stamped, loginDay }) => {
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     
 </script>
-    <script id="app-js" type="text/plain" data-hash="9c961022-466983">
+    <script id="app-js" type="text/plain" data-hash="9229ae3f-467438">
 "use strict";
 //#!file 00-core.jsx
 const { useState, useRef, useEffect, memo } = React;
@@ -8863,7 +8868,7 @@ const ImageFallback = memo(({ src, icon, className, iconSize, posX = 50, posY = 
         return (React.createElement("div", { className: `flex flex-col items-center justify-center w-full h-full opacity-40 bg-black/20 ${className || ''}` },
             React.createElement("span", { className: iconSize }, icon)));
     }
-    return React.createElement("img", { loading: size ? 'lazy' : undefined, decoding: "async", src: (cid && ((size === 'icon' && window.TACTICAL_IMGS_ICON && window.TACTICAL_IMGS_ICON[cid]) || (size === 'mid' && window.TACTICAL_IMGS_MID && window.TACTICAL_IMGS_MID[cid]) || (window.TACTICAL_IMGS && window.TACTICAL_IMGS[cid]))) || src, onError: () => setError(true), className: `w-full h-full object-cover ${className || ''}`, style: { objectPosition: `${posX}% ${posY}%`, transformOrigin: `${posX}% ${posY}%`, transform: `scale(${scale})` }, alt: "character", loading: "lazy", decoding: "async" });
+    return React.createElement("img", { decoding: "async", src: (cid && ((size === 'icon' && window.TACTICAL_IMGS_ICON && window.TACTICAL_IMGS_ICON[cid]) || (size === 'mid' && window.TACTICAL_IMGS_MID && window.TACTICAL_IMGS_MID[cid]) || (window.TACTICAL_IMGS && window.TACTICAL_IMGS[cid]))) || src, onError: () => setError(true), className: `w-full h-full object-cover ${className || ''}`, style: { objectPosition: `${posX}% ${posY}%`, transformOrigin: `${posX}% ${posY}%`, transform: `scale(${scale})` }, alt: "character", loading: size === 'mid' || size === 'icon' ? 'eager' : 'lazy', decoding: "async" });
 });
 //#!file 00b-balance.jsx
 // ===== BALANCE：ゲームバランスの数値をここに集約（#47）=====
@@ -13811,13 +13816,22 @@ function TasksScreen({ allCats, favOnly, setFavOnly, nearCounts, selEndStr, rend
 // 状態・関数はAppが持ち、props で受け取る（#44：App本体から分割。中身のJSXは分割前と同一）
 // #57：カード1枚を memo 部品に。画像・数値が変わらない限り再描画しない（MEMBERを開く／絞り込む時の負荷を軽減）
 // #89 非表示の間は再描画しない／display:noneで隠す（アニメーションも止まる）
-const KeepAlive = memo(({ active, children }) => React.createElement("div", { className: active ? '' : 'hidden' }, children), (a, b) => !a.active && !b.active);
+const KeepAlive = memo(({ active, children }) => {
+    const ref = React.useRef(null);
+    // 再表示した最初のフレームから光を動かす（隠している間に付いた .mc-off を同期的に外す。画面外のカードだけ後からIOが付け直す）
+    React.useLayoutEffect(() => { if (active && ref.current)
+        ref.current.querySelectorAll('.mc-off').forEach(e => e.classList.remove('mc-off')); }, [active]);
+    return React.createElement("div", { ref: ref, className: active ? '' : 'hidden' }, children);
+}, (a, b) => !a.active && !b.active);
 const MemberCard = memo(({ student, ms, lv, memberInfo, dk, onPick, charging }) => {
     const MR = OPS_ROLE[student.role] || OPS_ROLE['アタッカー'];
     // #89 画面内にいるカードだけ光・枠のアニメを動かす（画面外はpaused）
     const cardRef = React.useRef(null);
     React.useEffect(() => { const el = cardRef.current; if (!el || student.rare !== 'SSR' || !window.IntersectionObserver)
-        return; const io = new IntersectionObserver(([e]) => el.classList.toggle('mc-off', !e.isIntersecting)); io.observe(el); return () => io.disconnect(); }, [student.rare]);
+        return; let tm = 0; const io = new IntersectionObserver(([e]) => { clearTimeout(tm); if (e.isIntersecting)
+        el.classList.remove('mc-off');
+    else
+        tm = setTimeout(() => el.classList.add('mc-off'), 400); }, { rootMargin: '300px' }); io.observe(el); return () => { clearTimeout(tm); io.disconnect(); }; }, [student.rare]);
     return (React.createElement("div", { ref: cardRef, style: { contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }, onClick: () => onPick(student), className: `rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}` },
         React.createElement("div", { className: "absolute inset-0 z-0" },
             React.createElement(ImageFallback, { size: "mid", src: student.img, icon: student.icon, iconSize: "text-5xl mt-4", posX: student.posX, posY: student.posY, scale: student.scale })),
