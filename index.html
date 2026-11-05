@@ -5499,7 +5499,7 @@ function makeBgm(ctx, vol, mode) {
 //#!file 09-ops-modal.jsx
         const OpsModal = ({ initTab = 'sortie', taskDone = false, onDaily = () => {}, playerLevel = 1, theme, owned, bondExp, ops, setOps, onClose, setBattleBgm, powerBuff = 1, setStones, setCrystals, setBondExp, playSound, speakText, showToast, regClose, tutStep = null, tutEvent = () => {}, tutGo = () => {} }) => {
             let dk = theme === 'dark';
-            const [tab, setTab] = useState(initTab); const [step, setStep] = useState('stage'); const [sel, setSel] = useState(1); const [bt, setBt] = useState(null); const [fi, setFi] = useState(0); const [spd, setSpd] = useState(1);
+            const [tab, setTab] = useState(initTab); const [step, setStep] = useState('stage'); const [sel, setSel] = useState(() => abyssUnlocked(ops) ? 0 : 1); const [stOpen, setStOpen] = useState(false); const [bt, setBt] = useState(null); const [fi, setFi] = useState(0); const [spd, setSpd] = useState(1);
             const [plan, setPlan] = useState(null); const [planOpen, setPlanOpen] = useState(false);   // #85 作戦カードの割り当て（null＝おまかせ）
             if (bt) dk = true;   // #78 戦闘中はライトモードでも暗い画面（文字・演出が見やすい）
             const [fx, setFx] = useState(null); const [skc, setSkc] = useState(null); const btRef = useRef(null); const doneRef = useRef(true); const closeRef = useRef(onClose);
@@ -5738,7 +5738,7 @@ function makeBgm(ctx, vol, mode) {
                     <div className="flex-1 flex flex-col min-h-0">
                         <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
                             <div>{(() => { const on = powerBuff > 1; return <div className={`mb-3 text-xs font-black px-3 py-2 rounded-xl border ${on ? 'border-orange-400/70 text-orange-200 bg-gradient-to-r from-orange-500/25 to-rose-500/20 shadow-[0_0_12px_rgba(251,146,60,.4)]' : (dk ? 'border-slate-600 text-slate-300 bg-slate-800/40' : 'border-slate-300 text-slate-600 bg-slate-50')}`}>{on ? `🔥 全任務達成ボーナス発動中：戦力 ×${powerBuff}（今日限り・HP／ATK）` : `🎯 今日の任務を全て達成すると、今日の出撃の戦力が ×${BALANCE.ops.allClearPower} になる`}</div>; })()}<div className="font-tech font-black text-[11px] tracking-widest text-cyan-500 mb-1.5">▌STAGE SELECT</div>
-                                <div className="space-y-2">{OPS_STAGES.map(s => { const lock = s.n > 1 && !(ops.stars[s.n - 1] > 0); const on = sel === s.n; return (
+                                <div className="space-y-2">{abyssOpen && <button onClick={() => { setStOpen(v => !v); playSound('click'); }} className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-black ${dk ? 'border-slate-600 bg-slate-800/40 text-slate-300' : 'border-slate-300 bg-slate-50 text-slate-600'}`}><span>STAGE 1〜{OPS_STAGES.length}（全★3クリア済み）</span><span>{stOpen ? '▲ 畳む' : '▼ 開く'}</span></button>}{(!abyssOpen || stOpen) && OPS_STAGES.map(s => { const lock = s.n > 1 && !(ops.stars[s.n - 1] > 0); const on = sel === s.n; return (
                                     <div key={s.n} data-tut={`stage-${s.n}`} onClick={() => { if (lock) { playSound('error'); showToast(`STAGE ${s.n - 1} をクリアで解放`); return; } setSel(s.n); playSound('click'); }} className={`relative flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${lock ? 'opacity-40' : ''} ${on ? 'border-cyan-300 bg-cyan-500/15 shadow-[0_0_14px_rgba(34,211,238,.4)]' : card}`}>
                                         <div className="text-3xl w-12 h-12 rounded-lg bg-black/40 flex items-center justify-center border border-red-500/30">{lock ? '🔒' : s.e}</div>
                                         <div className="absolute top-1.5 right-2 z-10 flex flex-col items-end gap-0.5" aria-label="クリア報酬"><span className="text-[9px] font-tech font-black tracking-widest opacity-60">CLEAR REWARD</span><div className="flex items-center gap-1"><RwChips p={{ cry: BALANCE.ops.clearCrystalBase + s.n * BALANCE.ops.clearCrystalPerStage, sto: (ops.stars[s.n] || 0) > 0 ? 0 : 2 }} x big /></div></div>
@@ -8831,7 +8831,7 @@ const LoginCalendar = ({ theme, days, todayStr, stamped, loginDay }) => {
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     
 </script>
-    <script id="app-js" type="text/plain" data-hash="49812b97-465680">
+    <script id="app-js" type="text/plain" data-hash="58e42039-466171">
 "use strict";
 //#!file 00-core.jsx
 const { useState, useRef, useEffect, memo } = React;
@@ -9916,7 +9916,8 @@ const OpsModal = ({ initTab = 'sortie', taskDone = false, onDaily = () => { }, p
     let dk = theme === 'dark';
     const [tab, setTab] = useState(initTab);
     const [step, setStep] = useState('stage');
-    const [sel, setSel] = useState(1);
+    const [sel, setSel] = useState(() => abyssUnlocked(ops) ? 0 : 1);
+    const [stOpen, setStOpen] = useState(false);
     const [bt, setBt] = useState(null);
     const [fi, setFi] = useState(0);
     const [spd, setSpd] = useState(1);
@@ -10470,42 +10471,49 @@ const OpsModal = ({ initTab = 'sortie', taskDone = false, onDaily = () => { }, p
                 React.createElement("div", null,
                     (() => { const on = powerBuff > 1; return React.createElement("div", { className: `mb-3 text-xs font-black px-3 py-2 rounded-xl border ${on ? 'border-orange-400/70 text-orange-200 bg-gradient-to-r from-orange-500/25 to-rose-500/20 shadow-[0_0_12px_rgba(251,146,60,.4)]' : (dk ? 'border-slate-600 text-slate-300 bg-slate-800/40' : 'border-slate-300 text-slate-600 bg-slate-50')}` }, on ? `🔥 全任務達成ボーナス発動中：戦力 ×${powerBuff}（今日限り・HP／ATK）` : `🎯 今日の任務を全て達成すると、今日の出撃の戦力が ×${BALANCE.ops.allClearPower} になる`); })(),
                     React.createElement("div", { className: "font-tech font-black text-[11px] tracking-widest text-cyan-500 mb-1.5" }, "\u258CSTAGE SELECT"),
-                    React.createElement("div", { className: "space-y-2" }, OPS_STAGES.map(s => {
-                        const lock = s.n > 1 && !(ops.stars[s.n - 1] > 0);
-                        const on = sel === s.n;
-                        return (React.createElement("div", { key: s.n, "data-tut": `stage-${s.n}`, onClick: () => { if (lock) {
-                                playSound('error');
-                                showToast(`STAGE ${s.n - 1} をクリアで解放`);
-                                return;
-                            } setSel(s.n); playSound('click'); }, className: `relative flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${lock ? 'opacity-40' : ''} ${on ? 'border-cyan-300 bg-cyan-500/15 shadow-[0_0_14px_rgba(34,211,238,.4)]' : card}` },
-                            React.createElement("div", { className: "text-3xl w-12 h-12 rounded-lg bg-black/40 flex items-center justify-center border border-red-500/30" }, lock ? '🔒' : s.e),
-                            React.createElement("div", { className: "absolute top-1.5 right-2 z-10 flex flex-col items-end gap-0.5", "aria-label": "\u30AF\u30EA\u30A2\u5831\u916C" },
-                                React.createElement("span", { className: "text-[9px] font-tech font-black tracking-widest opacity-60" }, "CLEAR REWARD"),
-                                React.createElement("div", { className: "flex items-center gap-1" },
-                                    React.createElement(RwChips, { p: { cry: BALANCE.ops.clearCrystalBase + s.n * BALANCE.ops.clearCrystalPerStage, sto: (ops.stars[s.n] || 0) > 0 ? 0 : 2 }, x: true, big: true }))),
-                            React.createElement("div", { className: "flex-1 min-w-0" },
-                                React.createElement("div", { className: "flex items-center gap-2" },
-                                    React.createElement("span", { className: "font-tech font-black text-[10px] text-cyan-500" },
-                                        "STAGE ",
-                                        s.n),
-                                    React.createElement("span", { className: "text-amber-400 text-xs tracking-tighter" }, [1, 2, 3].map(k => (ops.stars[s.n] || 0) >= k ? '★' : '☆').join(''))),
-                                React.createElement("div", { className: "font-black text-sm truncate pr-24" }, s.name),
-                                React.createElement("div", { className: "flex items-center gap-1.5 mt-0.5" },
-                                    React.createElement("span", { className: "text-[10px] font-tech font-black opacity-70" }, "\u96E3\u6613\u5EA6"),
-                                    React.createElement(DifStars, { n: s.dif }),
-                                    React.createElement("span", { className: "text-[10px] font-tech font-black opacity-70" },
-                                        s.dif,
-                                        "/10")),
-                                s.rp && React.createElement("div", { className: "text-[10px] font-bold mt-0.5 opacity-80" },
-                                    "\u76EE\u5B89\uFF083\u4EBA\u5408\u8A08\uFF09HP ",
-                                    s.rp.hp,
-                                    " / ATK ",
-                                    s.rp.atk),
-                                React.createElement("div", { className: "flex flex-wrap gap-1 mt-0.5" },
-                                    s.tag.map(t => React.createElement("span", { key: t, className: "text-[10px] font-bold px-1.5 rounded bg-red-500/15 text-red-400 border border-red-500/30" }, t)),
-                                    React.createElement("span", { className: "text-[10px] opacity-60" }, "\u63A8\u5968"),
-                                    s.rec.map(r => React.createElement("span", { key: r, className: "text-[10px]" }, OPS_ROLE[r].i))))));
-                    })),
+                    React.createElement("div", { className: "space-y-2" },
+                        abyssOpen && React.createElement("button", { onClick: () => { setStOpen(v => !v); playSound('click'); }, className: `w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-black ${dk ? 'border-slate-600 bg-slate-800/40 text-slate-300' : 'border-slate-300 bg-slate-50 text-slate-600'}` },
+                            React.createElement("span", null,
+                                "STAGE 1\u301C",
+                                OPS_STAGES.length,
+                                "\uFF08\u5168\u26053\u30AF\u30EA\u30A2\u6E08\u307F\uFF09"),
+                            React.createElement("span", null, stOpen ? '▲ 畳む' : '▼ 開く')),
+                        (!abyssOpen || stOpen) && OPS_STAGES.map(s => {
+                            const lock = s.n > 1 && !(ops.stars[s.n - 1] > 0);
+                            const on = sel === s.n;
+                            return (React.createElement("div", { key: s.n, "data-tut": `stage-${s.n}`, onClick: () => { if (lock) {
+                                    playSound('error');
+                                    showToast(`STAGE ${s.n - 1} をクリアで解放`);
+                                    return;
+                                } setSel(s.n); playSound('click'); }, className: `relative flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${lock ? 'opacity-40' : ''} ${on ? 'border-cyan-300 bg-cyan-500/15 shadow-[0_0_14px_rgba(34,211,238,.4)]' : card}` },
+                                React.createElement("div", { className: "text-3xl w-12 h-12 rounded-lg bg-black/40 flex items-center justify-center border border-red-500/30" }, lock ? '🔒' : s.e),
+                                React.createElement("div", { className: "absolute top-1.5 right-2 z-10 flex flex-col items-end gap-0.5", "aria-label": "\u30AF\u30EA\u30A2\u5831\u916C" },
+                                    React.createElement("span", { className: "text-[9px] font-tech font-black tracking-widest opacity-60" }, "CLEAR REWARD"),
+                                    React.createElement("div", { className: "flex items-center gap-1" },
+                                        React.createElement(RwChips, { p: { cry: BALANCE.ops.clearCrystalBase + s.n * BALANCE.ops.clearCrystalPerStage, sto: (ops.stars[s.n] || 0) > 0 ? 0 : 2 }, x: true, big: true }))),
+                                React.createElement("div", { className: "flex-1 min-w-0" },
+                                    React.createElement("div", { className: "flex items-center gap-2" },
+                                        React.createElement("span", { className: "font-tech font-black text-[10px] text-cyan-500" },
+                                            "STAGE ",
+                                            s.n),
+                                        React.createElement("span", { className: "text-amber-400 text-xs tracking-tighter" }, [1, 2, 3].map(k => (ops.stars[s.n] || 0) >= k ? '★' : '☆').join(''))),
+                                    React.createElement("div", { className: "font-black text-sm truncate pr-24" }, s.name),
+                                    React.createElement("div", { className: "flex items-center gap-1.5 mt-0.5" },
+                                        React.createElement("span", { className: "text-[10px] font-tech font-black opacity-70" }, "\u96E3\u6613\u5EA6"),
+                                        React.createElement(DifStars, { n: s.dif }),
+                                        React.createElement("span", { className: "text-[10px] font-tech font-black opacity-70" },
+                                            s.dif,
+                                            "/10")),
+                                    s.rp && React.createElement("div", { className: "text-[10px] font-bold mt-0.5 opacity-80" },
+                                        "\u76EE\u5B89\uFF083\u4EBA\u5408\u8A08\uFF09HP ",
+                                        s.rp.hp,
+                                        " / ATK ",
+                                        s.rp.atk),
+                                    React.createElement("div", { className: "flex flex-wrap gap-1 mt-0.5" },
+                                        s.tag.map(t => React.createElement("span", { key: t, className: "text-[10px] font-bold px-1.5 rounded bg-red-500/15 text-red-400 border border-red-500/30" }, t)),
+                                        React.createElement("span", { className: "text-[10px] opacity-60" }, "\u63A8\u5968"),
+                                        s.rec.map(r => React.createElement("span", { key: r, className: "text-[10px]" }, OPS_ROLE[r].i))))));
+                        })),
                     (() => {
                         const D = stageOf(-1);
                         const un = dailyUnlocked(ops);
