@@ -4523,6 +4523,7 @@
         @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
         .anim-border-flow { background-size: 200% 100%; animation: borderFlow 4s linear infinite; }
         @keyframes shineSweep { 0% { transform: translateX(-130%) skewX(-20deg); } 60%, 100% { transform: translateX(330%) skewX(-20deg); } }
+        .mc-off.gacha-shine::after, .mc-off.rf-ssr::before { animation-play-state: paused !important; }
         .gacha-shine { position: relative; overflow: hidden; }
         .gacha-shine::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: shineSweep 3.4s ease-in-out infinite; pointer-events: none; }
         @keyframes pityShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
@@ -5953,6 +5954,7 @@ function makeBgm(ctx, vol, mode) {
 
             const [activeTab, setActiveTab] = useState('lobby');
             const [displayTab, setDisplayTab] = useState('lobby');
+            const memberSeenRef = useRef(false); if (displayTab === 'member') memberSeenRef.current = true;   // #89 一度開いたMEMBERは破棄せず隠す（開閉が軽くなる）
             const [fadeState, setFadeState] = useState('in');
             const [theme, setTheme] = useState(() => { try { const v = safeGet('schale_theme'); return v === 'dark' ? 'dark' : 'light'; } catch(e) { return 'light'; } });
             const [stones, setStones] = useState(() => loadNum('schale_stones', BALANCE.initialStones));
@@ -7302,7 +7304,7 @@ function makeBgm(ctx, vol, mode) {
 
                         {displayTab === 'schedule' && <TasksScreen {...{ allCats, favOnly, setFavOnly, nearCounts: { today: nearToday.length + schedules.filter(x => x.completed && (x.completedDate === selectedDate || (!x.completedDate && x.date === selectedDate))).length, week: nearWeek.length, far: nearFar.length }, selEndStr, renderNearSelected, openAddTask, openFocus: () => setShowFocus(true), openReview: () => setShowReview(true), focusActive: !!focusRun, focusTasks, remainCount: actionableToday.length, remainMin, streakDays, bestStreak: streak.best, taskDone: taskDoneToday, initiateComplete, actionableToday, applyCategory, calMonth, calYear, allCats, categoryFilter, clearCompletedSchedules, getDayTasks, goToToday, isBottomSheetExpanded, isCalendarOpen, onSheetPointerDown, onSheetPointerMove, onSheetPointerUp, playSound, renderInlineCalendar, renderTaskListItems, rightTab, schedules, selectedDate, setCategoryFilter, setIsBottomSheetExpanded, setRightTab, setSheetHidden, sheetDragH, sheetHidden, sheetRef, tabCounts, theme, recurringWeekly, todayStr }} />}
 
-                        {displayTab === 'member' && <MemberScreen {...{ allCharacters, bondExp, memberInfo, memberMatch, memberOrder, memberRare, memberRole, memberSort, ownedStudents, playSound, setMemberInfo, setMemberOrder, setMemberRare, setMemberRole, setMemberSort, setSelectedStudentDetail, theme }} />}
+                        {(displayTab === 'member' || memberSeenRef.current) && <KeepAlive active={displayTab === 'member'}><MemberScreen {...{ allCharacters, bondExp, memberInfo, memberMatch, memberOrder, memberRare, memberRole, memberSort, ownedStudents, playSound, setMemberInfo, setMemberOrder, setMemberRare, setMemberRole, setMemberSort, setSelectedStudentDetail, theme }} /></KeepAlive>}
 
                         {displayTab === 'gacha' && <GachaScreen {...{ allCharacters, changePickup, crystals, pickupId, pityCount, playSound, puFade, setShowExchange, setShowGachaDetail, setShowGachaHistoryModal, startGacha, stones, theme }} />}
 
@@ -8104,10 +8106,15 @@ function TasksScreen({ allCats, favOnly, setFavOnly, nearCounts, selEndStr, rend
 // MEMBER（displayTab === 'member'）
 // 状態・関数はAppが持ち、props で受け取る（#44：App本体から分割。中身のJSXは分割前と同一）
 // #57：カード1枚を memo 部品に。画像・数値が変わらない限り再描画しない（MEMBERを開く／絞り込む時の負荷を軽減）
+// #89 非表示の間は再描画しない／display:noneで隠す（アニメーションも止まる）
+const KeepAlive = memo(({ active, children }) => <div className={active ? '' : 'hidden'}>{children}</div>, (a, b) => !a.active && !b.active);
 const MemberCard = memo(({ student, ms, lv, memberInfo, dk, onPick, charging }) => {
     const MR = OPS_ROLE[student.role] || OPS_ROLE['アタッカー'];
+    // #89 画面内にいるカードだけ光・枠のアニメを動かす（画面外はpaused）
+    const cardRef = React.useRef(null);
+    React.useEffect(() => { const el = cardRef.current; if (!el || student.rare !== 'SSR' || !window.IntersectionObserver) return; const io = new IntersectionObserver(([e]) => el.classList.toggle('mc-off', !e.isIntersecting)); io.observe(el); return () => io.disconnect(); }, [student.rare]);
     return (
-                    <div style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }} onClick={() => onPick(student)} className={`rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}`}>
+                    <div ref={cardRef} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }} onClick={() => onPick(student)} className={`rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}`}>
                         <div className="absolute inset-0 z-0"><ImageFallback size="mid" src={student.img} icon={student.icon} iconSize="text-5xl mt-4" posX={student.posX} posY={student.posY} scale={student.scale} /></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10 pointer-events-none"></div>
                         <span className="absolute top-1.5 left-1.5 z-20 text-[10px] font-tech font-black text-pink-300 bg-black/60 px-1.5 py-0.5 rounded border border-pink-500/40 pointer-events-none">♥{lv}</span>
@@ -8831,7 +8838,7 @@ const LoginCalendar = ({ theme, days, todayStr, stamped, loginDay }) => {
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     
 </script>
-    <script id="app-js" type="text/plain" data-hash="58e42039-466171">
+    <script id="app-js" type="text/plain" data-hash="9c961022-466983">
 "use strict";
 //#!file 00-core.jsx
 const { useState, useRef, useEffect, memo } = React;
@@ -10922,6 +10929,9 @@ function App() {
     });
     const [activeTab, setActiveTab] = useState('lobby');
     const [displayTab, setDisplayTab] = useState('lobby');
+    const memberSeenRef = useRef(false);
+    if (displayTab === 'member')
+        memberSeenRef.current = true; // #89 一度開いたMEMBERは破棄せず隠す（開閉が軽くなる）
     const [fadeState, setFadeState] = useState('in');
     const [theme, setTheme] = useState(() => { try {
         const v = safeGet('schale_theme');
@@ -13083,7 +13093,8 @@ function App() {
             React.createElement("main", { ref: mainScrollRef, className: `flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative transition-all duration-200 ${fadeState === 'out' ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'}` },
                 displayTab === 'lobby' && React.createElement(HomeScreen, { assignedStudent, bondExp, currentQuote, getDueInfo, handleCharacterTap, handleTabChange, homeDate, homePanelOpen, setHomePanelOpen, homePanelHide, setHomePanelHide, homeTasks, initiateComplete, isHomeToday, ops, playSound, quoteFade, renderWeeklyStrip, schedules, setHomeSelectedDate, setShowOps: setShowOpsT, theme, todayAllTasksCount, todayProgressRate, todayStr }),
                 displayTab === 'schedule' && React.createElement(TasksScreen, { allCats, favOnly, setFavOnly, nearCounts: { today: nearToday.length + schedules.filter(x => x.completed && (x.completedDate === selectedDate || (!x.completedDate && x.date === selectedDate))).length, week: nearWeek.length, far: nearFar.length }, selEndStr, renderNearSelected, openAddTask, openFocus: () => setShowFocus(true), openReview: () => setShowReview(true), focusActive: !!focusRun, focusTasks, remainCount: actionableToday.length, remainMin, streakDays, bestStreak: streak.best, taskDone: taskDoneToday, initiateComplete, actionableToday, applyCategory, calMonth, calYear, allCats, categoryFilter, clearCompletedSchedules, getDayTasks, goToToday, isBottomSheetExpanded, isCalendarOpen, onSheetPointerDown, onSheetPointerMove, onSheetPointerUp, playSound, renderInlineCalendar, renderTaskListItems, rightTab, schedules, selectedDate, setCategoryFilter, setIsBottomSheetExpanded, setRightTab, setSheetHidden, sheetDragH, sheetHidden, sheetRef, tabCounts, theme, recurringWeekly, todayStr }),
-                displayTab === 'member' && React.createElement(MemberScreen, { allCharacters, bondExp, memberInfo, memberMatch, memberOrder, memberRare, memberRole, memberSort, ownedStudents, playSound, setMemberInfo, setMemberOrder, setMemberRare, setMemberRole, setMemberSort, setSelectedStudentDetail, theme }),
+                (displayTab === 'member' || memberSeenRef.current) && React.createElement(KeepAlive, { active: displayTab === 'member' },
+                    React.createElement(MemberScreen, { allCharacters, bondExp, memberInfo, memberMatch, memberOrder, memberRare, memberRole, memberSort, ownedStudents, playSound, setMemberInfo, setMemberOrder, setMemberRare, setMemberRole, setMemberSort, setSelectedStudentDetail, theme })),
                 displayTab === 'gacha' && React.createElement(GachaScreen, { allCharacters, changePickup, crystals, pickupId, pityCount, playSound, puFade, setShowExchange, setShowGachaDetail, setShowGachaHistoryModal, startGacha, stones, theme }),
                 displayTab === 'settings' && React.createElement(SettingsScreen, { notifyEnabled, toggleNotify, addStones, advanceDay, allCharacters, bgmVolume, customConfirm, developerMode, exportBackup, getDayOffset, importBackup, maxAllBond, playSound, resetDay, restartTutorial, seVolume, setBgmVolume, setDeveloperMode, setSeVolume, setTheme, setVoiceEnabled, startMaxingProcess, theme, todayStr, updateCharacterPosX, updateCharacterPosY, updateCharacterScale, voiceEnabled })),
             React.createElement("footer", { className: `app-footer h-[60px] pb-[max(env(safe-area-inset-bottom),12px)] box-content backdrop-blur-md border-t z-50 shrink-0 shadow-[0_-5px_15px_rgba(0,0,0,0.2)] ${theme === 'dark' ? 'bg-[#0b1021]/95 border-cyan-500/20' : 'bg-white/95 border-slate-200'}` },
@@ -13799,9 +13810,15 @@ function TasksScreen({ allCats, favOnly, setFavOnly, nearCounts, selEndStr, rend
 // MEMBER（displayTab === 'member'）
 // 状態・関数はAppが持ち、props で受け取る（#44：App本体から分割。中身のJSXは分割前と同一）
 // #57：カード1枚を memo 部品に。画像・数値が変わらない限り再描画しない（MEMBERを開く／絞り込む時の負荷を軽減）
+// #89 非表示の間は再描画しない／display:noneで隠す（アニメーションも止まる）
+const KeepAlive = memo(({ active, children }) => React.createElement("div", { className: active ? '' : 'hidden' }, children), (a, b) => !a.active && !b.active);
 const MemberCard = memo(({ student, ms, lv, memberInfo, dk, onPick, charging }) => {
     const MR = OPS_ROLE[student.role] || OPS_ROLE['アタッカー'];
-    return (React.createElement("div", { style: { contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }, onClick: () => onPick(student), className: `rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}` },
+    // #89 画面内にいるカードだけ光・枠のアニメを動かす（画面外はpaused）
+    const cardRef = React.useRef(null);
+    React.useEffect(() => { const el = cardRef.current; if (!el || student.rare !== 'SSR' || !window.IntersectionObserver)
+        return; const io = new IntersectionObserver(([e]) => el.classList.toggle('mc-off', !e.isIntersecting)); io.observe(el); return () => io.disconnect(); }, [student.rare]);
+    return (React.createElement("div", { ref: cardRef, style: { contentVisibility: 'auto', containIntrinsicSize: 'auto 150px' }, onClick: () => onPick(student), className: `rounded-xl flex flex-col items-center cursor-pointer transition-all duration-150 ${charging ? 'scale-105 brightness-110 z-10 ring-2 ring-white/70 shadow-[0_0_18px_rgba(255,255,255,.35)]' : ''} [@media(hover:hover)]:hover:-translate-y-1 active:scale-[0.97] overflow-hidden aspect-[3/4] h-auto ${rfClass(student.rare)} ${student.rare === 'SSR' ? 'gacha-shine' : ''} ${dk ? 'bg-[#0b1021]' : 'bg-white'}` },
         React.createElement("div", { className: "absolute inset-0 z-0" },
             React.createElement(ImageFallback, { size: "mid", src: student.img, icon: student.icon, iconSize: "text-5xl mt-4", posX: student.posX, posY: student.posY, scale: student.scale })),
         React.createElement("div", { className: "absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10 pointer-events-none" }),
